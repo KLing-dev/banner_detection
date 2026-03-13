@@ -1,0 +1,16 @@
+paths:
+  rtspAddress: :8554
+
+encryption: "never"
+
+rtspAddress: ":8554"
+protocols: [tcp, udp]
+rtpAddress: ":8000"
+rtcpAddress: ":8001"
+
+runOnInit: ""
+runOnInitRestart: false
+runOnRequest: ""
+runOnRequestRestart: false
+
+logLevel: info
