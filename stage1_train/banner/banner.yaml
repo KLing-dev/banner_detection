@@ -1,0 +1,9 @@
+# 数据集绝对路径（关键！避免YOLO解析错误）
+path: F:\data\Projects\graduate\banner_detection\stage1_train\banner 
+# 训练/验证集相对路径（基于上面的绝对路径）
+train: images/train  
+val: images/val      
+
+# 类别配置（根据你的classes.txt调整）
+nc: 1                # 类别数（如果是多类别，改成对应数量）
+names: ['banner']    # 类别名称（和classes.txt一致）
