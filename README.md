@@ -95,29 +95,28 @@ ffmpeg -version  # 输出版本信息即成功
 ```
 banner_detection/
 ├── stage1_train/          # 阶段1：权重训练
-│   ├── dataset/           # 横幅标注数据集（需自行准备）
-│   │   ├── images/        # 训练/验证集图像
-│   │   │   ├── train/
-│   │   │   └── val/
-│   │   └── labels/        # YOLO 格式标注文件
-│   │       ├── train/
-│   │       └── val/
-│   ├── config.yaml        # YOLO12 训练配置
-│   ├── train.py           # 训练主脚本
-│   └── train_log/         # 训练日志/权重输出（自动生成）
+│   ├── banner/            # 横幅数据集
+│   │   ├── banner.yaml   # YOLO12 数据集配置
+│   │   ├── classes.txt   # 类别定义
+│   │   ├── images/       # 训练/验证集图像（不纳入Git）
+│   │   └── labels/        # YOLO 格式标注文件（不纳入Git）
+│   └── train_banner.py   # 训练主脚本
 ├── stage2_detect_track/   # 阶段2：检测+追踪
 │   ├── rtsp_server/       # RTSP 服务配置
 │   │   └── config.yml     # rtsp-simple-server 配置
-│   ├── detect_track.py    # 检测追踪主脚本
-│   └── output/            # 标注视频/检测日志（自动生成）
+│   └── detect_track.py    # 检测追踪主脚本
 ├── stage3_ocr/            # 阶段3：OCR 识别
-│   ├── ocr_recognize.py   # OCR 主脚本
-│   └── output/            # 文字识别结果/标注视频（自动生成）
+│   └── ocr_recognize.py  # OCR 主脚本
 ├── stage4_illegal_check/  # 阶段4：违规检测+告警
 │   ├── illegal_words.txt  # 违规词库（需自行编写/上传）
-│   ├── check_alert.py     # 违规比对+告警主脚本
-│   └── output/            # 最终视频/告警日志（自动生成）
-└── requirements.txt       # 环境依赖清单
+│   └── check_alert.py    # 违规比对+告警主脚本
+├── yolov12/               # YOLO12 官方环境
+│   ├── ultralytics/      # Ultralytics 官方库
+│   ├── yolov12n.pt       # 预训练权重（不纳入Git）
+│   └── train_banner.py   # 训练脚本
+├── .gitignore            # Git 忽略配置
+├── README.md             # 项目说明文档
+└── requirements.txt      # 环境依赖清单
 ```
 
 ### 阶段1：YOLO12 横幅权重训练

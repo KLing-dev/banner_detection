@@ -1,3 +1,8 @@
+yolov12/yolov12n.pt
+yolov12/*.pt
+runs/
+stage1_train/banner/images/*
+stage1_train/banner/labels/*
 __pycache__/
 *.py[cod]
 *$py.class
