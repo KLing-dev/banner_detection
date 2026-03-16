@@ -1,14 +1,29 @@
+# PyTorch
 torch==2.6.0
 torchvision==0.21.0
 torchaudio==2.6.0
+
+# YOLO12
 ultralytics>=8.0.0
+
+# OpenCV (视频处理)
 opencv-python>=4.8.0
-numpy>=1.24.0
+
+# 图像处理
 Pillow>=10.0.0
-pyyaml>=6.0
-tqdm>=4.65.0
-scipy>=1.11.0
+numpy>=1.24.0
+
+# 数据科学
 pandas>=2.0.0
+scipy>=1.11.0
 seaborn>=0.12.0
 matplotlib>=3.7.0
+
+# 工具库
+pyyaml>=6.0
+tqdm>=4.65.0
 psutil>=5.9.0
+
+# FFmpeg (视频编解码)
+# 通过 conda 安装：conda install -c conda-forge ffmpeg
+# 已添加到 graduate_yolov12 环境

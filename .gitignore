@@ -1,8 +1,17 @@
 yolov12/yolov12n.pt
 yolov12/*.pt
+stage1_train/yolov12n.pt
+stage1_train/*.pt
 runs/
 stage1_train/banner/images/*
 stage1_train/banner/labels/*
+
+# 视频数据目录（不上传）
+videodata/
+
+# 输出结果目录（不上传）
+stage4_illegal_check/output/
+
 __pycache__/
 *.py[cod]
 *$py.class
