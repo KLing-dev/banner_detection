@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--output', type=str, default=None, help='Output directory')
     parser.add_argument('--output-video', type=str, default=None, help='Output video filename')
     parser.add_argument('--ocr-result', type=str, default=None, help='OCR result JSON path')
-    parser.add_argument('--conf-thres', type=float, default=0.5, help='OCR confidence threshold')
+    parser.add_argument('--conf-thres', type=float, default=0.3, help='OCR confidence threshold')
     parser.add_argument('--expand-ratio', type=float, default=0.05, help='ROI expansion ratio')
     return parser.parse_args()
 
@@ -43,38 +43,20 @@ def get_output_paths(input_video, output_dir=None):
     return output_video, ocr_result, output_dir
 
 
-def preprocess_roi(roi, expand_ratio=0.05):
+def preprocess_roi(roi, expand_ratio=0.05, max_side=1000):
     """预处理 ROI 图像"""
     height, width = roi.shape[:2]
     
-    # 边缘扩展
-    expand_h = int(height * expand_ratio)
-    expand_w = int(width * expand_ratio)
+    # 跳过异常尺寸的 ROI
+    if height < 10 or width < 10:
+        return roi
     
-    # 创建扩展后的图像
-    expanded = np.zeros((height + 2*expand_h, width + 2*expand_w, 3), dtype=np.uint8)
-    expanded[expand_h:expand_h+height, expand_w:expand_w+width] = roi
+    # 简化处理：如果图像太大，缩放
+    if height > max_side or width > max_side:
+        scale = max_side / max(height, width)
+        roi = cv2.resize(roi, (int(width * scale), int(height * scale)))
     
-    # 灰度化
-    gray = cv2.cvtColor(expanded, cv2.COLOR_BGR2GRAY)
-    
-    # 高斯降噪
-    blur = cv2.GaussianBlur(gray, (3, 3), 0)
-    
-    # 对比度增强
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    enhanced = clahe.apply(blur)
-    
-    # 转换为 BGR
-    result = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
-    
-    # 缩放至合适大小
-    h, w = result.shape[:2]
-    scale = max(320 / h, 320 / w, 1.0)
-    if scale > 1:
-        result = cv2.resize(result, (int(w * scale), int(h * scale)))
-    
-    return result
+    return roi
 
 
 def merge_duplicate_texts(ocr_results):
@@ -98,34 +80,43 @@ def merge_duplicate_texts(ocr_results):
 
 
 def draw_text_with_background(frame, text, position, font_scale=0.5, text_color=(255, 255, 255), bg_color=None):
-    """在帧上绘制文字（带背景）"""
+    """在帧上绘制文字（支持中文）"""
     x, y = position
     
-    # 获取文字大小
-    (text_width, text_height), baseline = cv2.getTextSize(
-        text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 2
-    )
+    # 转换为 PIL 图像
+    pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(pil_img)
+    
+    # 使用默认字体
+    font_size = int(30 * font_scale)
+    
+    try:
+        font = ImageFont.truetype("msyh.ttc", font_size)
+    except:
+        try:
+            font = ImageFont.truetype("simsun.ttc", font_size)
+        except:
+            font = ImageFont.load_default()
+    
+    # 获取文字 bounding box
+    bbox = draw.textbbox((x, y), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
     
     # 绘制背景
     if bg_color is not None:
-        cv2.rectangle(
-            frame,
-            (x, y - text_height - 5),
-            (x + text_width + 5, y + 5),
-            bg_color,
-            -1
+        draw.rectangle(
+            [x, y - text_height - 2, x + text_width + 2, y + 2],
+            fill=bg_color
         )
     
     # 绘制文字
-    cv2.putText(
-        frame,
-        text,
-        (x, y),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        font_scale,
-        text_color,
-        2
-    )
+    draw.text((x, y - text_height), text, fill=text_color, font=font)
+    
+    # 转换回 OpenCV 格式
+    frame[:, :, :] = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    
+    return frame
 
 
 def main():
@@ -163,12 +154,7 @@ def main():
     
     # 初始化 PaddleOCR
     print("正在初始化 PaddleOCR...")
-    ocr = PaddleOCR(
-        use_angle_cls=True,
-        lang='ch',
-        use_gpu=True,
-        show_log=False
-    )
+    ocr = PaddleOCR(lang='ch')
     
     # 打开视频
     print(f"正在打开视频：{args.input_video}")
@@ -222,20 +208,28 @@ def main():
                 processed_roi = preprocess_roi(roi, args.expand_ratio)
                 
                 # OCR 识别
-                ocr_result = ocr.ocr(processed_roi, cls=True)
+                ocr_result = ocr.predict(processed_roi)
                 
-                # 提取文字
+                # 调试：打印 OCR 结果格式（仅前几帧）
+                if frame_id < 3:
+                    print(f"Frame {frame_id} OCR result: {ocr_result[:2] if ocr_result else 'None'}")
+                
+                # 提取文字 - PaddleOCR 新版本返回格式
                 frame_texts = []
-                if ocr_result and ocr_result[0]:
-                    for line in ocr_result[0]:
-                        if line and len(line) >= 2:
-                            text = line[1][0]
-                            text_conf = line[1][1]
-                            if text_conf >= args.conf_thres:
-                                frame_texts.append({
-                                    'text': text,
-                                    'text_conf': float(text_conf)
-                                })
+                if ocr_result and isinstance(ocr_result, list) and len(ocr_result) > 0:
+                    for item in ocr_result:
+                        if item is None:
+                            continue
+                        # 新版本返回格式是字典
+                        if isinstance(item, dict):
+                            rec_texts = item.get('rec_texts', [])
+                            rec_scores = item.get('rec_scores', [])
+                            for text, text_conf in zip(rec_texts, rec_scores):
+                                if text_conf >= args.conf_thres and text.strip():
+                                    frame_texts.append({
+                                        'text': text,
+                                        'text_conf': float(text_conf)
+                                    })
                 
                 # 合并重复文字
                 frame_texts = merge_duplicate_texts(frame_texts)
@@ -262,8 +256,8 @@ def main():
                             text_color = (128, 128, 128)
                         
                         # 绘制文字（带背景）
-                        text_y = y2 + 20 + i * 25
-                        draw_text_with_background(frame, label, (x1, text_y), 0.5, text_color)
+                        text_y = y2 + 20 + i * 30
+                        draw_text_with_background(frame, label, (x1, text_y), 0.8, text_color)
         
         # 写入输出视频
         out.write(frame)
