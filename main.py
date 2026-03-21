@@ -3,9 +3,12 @@
 检测 → OCR → 违规检测
 
 使用方法：
-    # 直接使用（生产环境）
-    python main.py --rtsp-url rtsp://... --illegal-words illegal_words.txt
-    python main.py --camera --illegal-words illegal_words.txt
+    # 实时模式（摄像头/RTSP流/视频）
+    python main.py --realtime --camera --illegal-words illegal_words.txt
+    python main.py --realtime --rtsp-url rtsp://... --illegal-words illegal_words.txt
+    python main.py --realtime --video videodata/test3.mp4 --illegal-words illegal_words.txt
+    
+    # 批处理模式（视频文件）
     python main.py --input videodata/test3.mp4 --illegal-words illegal_words.txt
     
     # 测试模式（输出所有中间文件）
@@ -31,6 +34,12 @@ def parse_args():
     parser.add_argument('--camera', action='store_true', help='Use camera as input')
     parser.add_argument('--camera-id', type=int, default=0, help='Camera device ID')
     parser.add_argument('--rtsp-url', type=str, help='RTSP stream URL')
+    parser.add_argument('--video', type=str, help='Video file path (for realtime mode)')
+    
+    # 模式
+    parser.add_argument('--realtime', action='store_true', help='Real-time mode: process frame by frame')
+    parser.add_argument('--test', action='store_true', help='Test mode: output all intermediate files')
+    parser.add_argument('--verbose', action='store_true', help='Verbose output')
     
     # 阶段参数
     parser.add_argument('--conf-thres', type=float, default=0.3, help='Detection confidence threshold')
@@ -41,12 +50,57 @@ def parse_args():
     
     # 输出
     parser.add_argument('--output', type=str, default=None, help='Output directory')
-    
-    # 模式
-    parser.add_argument('--test', action='store_true', help='Test mode: output all intermediate files')
-    parser.add_argument('--verbose', action='store_true', help='Verbose output')
+    parser.add_argument('--output-video', type=str, default=None, help='Output video path (for realtime mode)')
     
     return parser.parse_args()
+
+
+def run_realtime(args):
+    """运行实时模式"""
+    print("=" * 60)
+    print("实时模式")
+    print("=" * 60)
+    
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / 'realtime' / 'main.py'),
+        '--illegal-words', args.illegal_words,
+        '--conf-thres', str(args.conf_thres),
+        '--ocr-conf', str(args.ocr_conf)
+    ]
+    
+    if args.camera:
+        cmd.extend(['--camera'])
+        if args.camera_id != 0:
+            cmd.extend(['--camera-id', str(args.camera_id)])
+    elif args.rtsp_url:
+        cmd.extend(['--rtsp-url', args.rtsp_url])
+    elif args.video:
+        cmd.extend(['--video', args.video])
+    elif args.input:
+        cmd.extend(['--video', args.input])
+    else:
+        print("错误：实时模式需要指定输入源")
+        return False
+    
+    if args.output_video:
+        cmd.extend(['--output-video', args.output_video])
+    
+    print(f"执行命令：{' '.join(cmd)}")
+    
+    # 实时模式实时打印输出
+    process = subprocess.Popen(cmd, cwd=str(PROJECT_ROOT),
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT,
+                           text=True,
+                           encoding='utf-8',
+                           errors='replace')
+    
+    for line in process.stdout:
+        print(line.rstrip())
+    
+    process.wait()
+    return process.returncode == 0
 
 
 def get_output_dir():
@@ -188,7 +242,11 @@ def cleanup_intermediate_files(args, output_dir, input_file):
 def main():
     args = parse_args()
     
-    # 获取输入文件名
+    # 实时模式
+    if args.realtime:
+        return 0 if run_realtime(args) else 1
+    
+    # 批处理模式
     if args.filename:
         input_file = Path(args.filename).stem
     elif args.input:

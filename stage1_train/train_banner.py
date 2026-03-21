@@ -12,12 +12,20 @@ def main():
         print("⚠️ 未检测到GPU，将使用CPU训练（速度极慢）")
 
     # 2. 加载YOLOv12预训练模型
-    model = YOLO('yolov12n.pt')
-    print("📌 成功加载YOLOv12n模型")
+    import os
+    # 构建相对于当前脚本的路径
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_dir)
+    yolov12_path = os.path.join(project_root, 'yolov12', 'yolov12n.pt')
+    
+    model = YOLO(yolov12_path)
+    print(f"📌 成功加载YOLOv12n模型：{yolov12_path}")
 
     # 3. 开始训练（固定batch=16，2的次方倍数+适配95%显存）
     try:
-        data_path = r"F:\data\Projects\graduate\banner_detection\stage1_train\banner\banner.yaml"
+        # 构建相对于当前脚本的路径
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        data_path = os.path.join(current_dir, 'banner', 'banner.yaml')
         
         results = model.train(
             data=data_path,          
@@ -25,7 +33,7 @@ def main():
             imgsz=640,
             batch=16,                # 核心：2的次方倍数，最接近23且显存安全
             device='0',
-            patience=15,             # 15轮无提升停止
+            patience=20,             # 20轮无提升停止
             lr0=0.005,
             weight_decay=0.0005,
             fliplr=0.5,
@@ -33,20 +41,24 @@ def main():
             mosaic=1.0,
             pretrained=True,
             save=True,
-            project='runs/train',
+            project=os.path.join(current_dir, 'runs', 'train'),  # 修改：确保在脚本目录下创建runs
             name='yolov12_banner_final',
             val=True,
             cache=False              
         )
 
         # 打印训练结果
-        print(f"\n✅ 训练完成！最优权重路径：runs/train/yolov12_banner_final/weights/best.pt")
+        runs_dir = os.path.join(current_dir, 'runs', 'train', 'yolov12_banner_final')
+        best_weights_path = os.path.join(runs_dir, 'weights', 'best.pt')
+        print(f"\n✅ 训练完成！最优权重路径：{best_weights_path}")
         print(f"✅ 验证集mAP@0.5: {results.trainer.best_metrics['metrics/mAP50(B)']:.4f}")
 
     except Exception as e:
         print(f"❌ 训练出错：{e}")
         print(f"💡 检查数据集路径是否正确：{data_path}")
         print("💡 若显存溢出，将batch=16改为batch=8（2³）")
+        print(f"💡 当前工作目录：{os.getcwd()}")
+        print(f"💡 脚本所在目录：{os.path.dirname(os.path.abspath(__file__))}")
 
 if __name__ == '__main__':
     main()
