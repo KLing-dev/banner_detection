@@ -43,9 +43,9 @@ def get_output_dir():
 
 
 def run_stage2(args):
-    """运行阶段2：检测与追踪"""
+    """运行阶段：检测"""
     print("\n" + "=" * 60)
-    print("阶段 2：横幅检测与追踪")
+    print("阶段：检测")
     print("=" * 60)
     
     # 构建命令
@@ -78,9 +78,9 @@ def run_stage2(args):
 
 
 def run_stage3(detected_video, detect_log):
-    """运行阶段3：OCR识别"""
+    """运行阶段：OCR"""
     print("\n" + "=" * 60)
-    print("阶段 3：OCR 文字识别")
+    print("阶段：OCR")
     print("=" * 60)
     
     ocr_video = str(Path(detected_video).with_suffix('')).replace('_detected', '_ocr') + '.mp4'
@@ -101,9 +101,9 @@ def run_stage3(detected_video, detect_log):
 
 
 def run_stage4(ocr_video, ocr_result, illegal_words):
-    """运行阶段4：违规词检测"""
+    """运行阶段：违规检测"""
     print("\n" + "=" * 60)
-    print("阶段 4：违规词检测与告警")
+    print("阶段：违规检测")
     print("=" * 60)
     
     cmd = [
@@ -161,31 +161,31 @@ def main():
     detected_video = output_dir / f"{input_file}_detected.mp4"
     detect_log = output_dir / f"{input_file}_detect_log.json"
     
-    # 如果检测日志已存在，说明阶段2已完成
+    # 阶段1: 检测
     if not detect_log.exists():
-        print("\n[阶段2] 检测日志不存在，开始运行阶段2...")
+        print("\n[检测] 开始...")
         success = run_stage2(args)
         if not success:
-            print("阶段2执行失败！")
+            print("检测执行失败！")
             return 1
     else:
-        print(f"\n[阶段2] 检测日志已存在，跳过阶段2")
+        print(f"\n[检测] 已完成，跳过")
     
-    # 阶段3
+    # 阶段2: OCR
     ocr_result = output_dir / f"{input_file}_ocr_result.json"
     ocr_video = output_dir / f"{input_file}_ocr.mp4"
     
     if not ocr_result.exists():
-        print("\n[阶段3] OCR结果不存在，开始运行阶段3...")
+        print("\n[OCR] 开始...")
         success = run_stage3(detected_video, detect_log)
         if not success:
-            print("阶段3执行失败！")
+            print("OCR执行失败！")
             return 1
     else:
-        print(f"\n[阶段3] OCR结果已存在，跳过阶段3")
+        print(f"\n[OCR] 已完成，跳过")
     
-    # 阶段4
-    print("\n[阶段4] 开始运行阶段4...")
+    # 阶段3: 违规检测
+    print("\n[违规检测] 开始...")
     success = run_stage4(ocr_video, ocr_result, args.illegal_words)
     if not success:
         print("阶段4执行失败！")
