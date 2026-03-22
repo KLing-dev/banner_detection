@@ -150,6 +150,7 @@ def main():
     model_path = PROJECT_ROOT / 'stage1_train' / 'runs' / 'train' / 'yolov12_banner_final5' / 'weights' / 'best.pt'
     detector = BannerDetectionTracker()
     detector.load_model(str(model_path))
+    detector._init_tracker()
     
     # 初始化 OCR
     print("初始化 OCR...")
