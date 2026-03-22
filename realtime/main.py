@@ -148,10 +148,8 @@ def main():
     # 初始化检测器
     print("初始化检测模型...")
     model_path = PROJECT_ROOT / 'stage1_train' / 'runs' / 'train' / 'yolov12_banner_final5' / 'weights' / 'best.pt'
-    detector = BannerDetectionTracker(
-        model_path=str(model_path),
-        conf_threshold=args.conf_thres
-    )
+    detector = BannerDetectionTracker()
+    detector.load_model(str(model_path))
     
     # 初始化 OCR
     print("初始化 OCR...")
