@@ -196,6 +196,10 @@ def main():
     fps_start_time = datetime.now()
     fps_frame_count = 0
     
+    # 用于去重：记录每个 track_id 上一次告警的文字和时间
+    last_alert = {}  # {track_id: {'text': str, 'time': datetime}}
+    ALERT_COOLDOWN = 2  # 相同文字2秒内不重复告警
+    
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -208,6 +212,9 @@ def main():
         
         frame_count += 1
         fps_frame_count += 1
+        
+        # 当前帧已告警的内容（帧内去重）
+        frame_alerted_texts = set()
         
         # 1. YOLO 检测
         results = detector.model(frame, conf=detector.config.CONF_THRESHOLD, verbose=False)
@@ -267,11 +274,39 @@ def main():
                         is_illegal, illegal_word = check_illegal(text, illegal_words)
                         
                         if is_illegal:
-                            # 实时告警输出
-                            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                            alert_msg = f"[{timestamp}] banner_warning 发现违规词: {text}"
-                            print(alert_msg)
-                            alert_count += 1
+                            # 去重检查：相同 track_id + 相同文字在冷却时间内不重复告警
+                            track_id = obj.track_id
+                            current_time = datetime.now()
+                            should_alert = True
+                            
+                            # 帧内去重：同一帧不重复告警相同文字
+                            text_key = f"{track_id}:{text}"
+                            if text_key in frame_alerted_texts:
+                                should_alert = False
+                            
+                            if track_id in last_alert:
+                                last_info = last_alert[track_id]
+                                if last_info['text'] == text:
+                                    # 相同文字，检查时间
+                                    time_diff = (current_time - last_info['time']).total_seconds()
+                                    if time_diff < ALERT_COOLDOWN:
+                                        should_alert = False
+                            
+                            if should_alert:
+                                # 实时告警输出
+                                timestamp = current_time.strftime('%Y-%m-%d %H:%M:%S')
+                                alert_msg = f"[{timestamp}] banner_warning 发现违规词: {text}"
+                                print(alert_msg)
+                                alert_count += 1
+                                
+                                # 记录告警信息
+                                last_alert[track_id] = {'text': text, 'time': current_time}
+                                frame_alerted_texts.add(text_key)
+                            
+                            # 绘制违规标记
+                            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
+                            label = f"违规: {illegal_word}"
+                            draw_chinese_text(frame, label, (x1, y1 - 30), 0.7, (255, 255, 255), (0, 0, 255))
                             
                             frame_alerts.append({
                                 'bbox': [x1, y1, x2, y2],
