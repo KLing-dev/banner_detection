@@ -3,6 +3,8 @@
 摄像头/RTSP流 → 实时检测 → 实时OCR → 实时告警
 """
 
+import sys
+import os
 import argparse
 import cv2
 import numpy as np
@@ -11,8 +13,9 @@ from datetime import datetime
 from paddleocr import PaddleOCR
 from PIL import Image, ImageDraw, ImageFont
 
-# 添加项目路径
-import sys
+os.environ['PYTHONUNBUFFERED'] = '1'
+sys.stdout.reconfigure(line_buffering=True)
+
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / 'stage2_detect_track'))
 sys.path.insert(0, str(PROJECT_ROOT / 'stage1_train'))
@@ -350,7 +353,7 @@ def main():
         
         # 计算 FPS
         elapsed = (datetime.now() - fps_start_time).total_seconds()
-        if elapsed >= 5:
+        if elapsed >= 1:
             current_fps = fps_frame_count / elapsed
             print(f"已处理 {frame_count} 帧, 当前 FPS: {current_fps:.1f}, 告警次数: {alert_count}", flush=True)
             fps_start_time = datetime.now()
