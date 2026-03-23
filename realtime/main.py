@@ -296,7 +296,7 @@ def main():
                                 # 实时告警输出
                                 timestamp = current_time.strftime('%Y-%m-%d %H:%M:%S')
                                 alert_msg = f"[{timestamp}] banner_warning 发现违规词: {text}"
-                                print(alert_msg)
+                                print(alert_msg, flush=True)
                                 alert_count += 1
                                 
                                 # 记录告警信息
@@ -352,7 +352,7 @@ def main():
         elapsed = (datetime.now() - fps_start_time).total_seconds()
         if elapsed >= 5:
             current_fps = fps_frame_count / elapsed
-            print(f"已处理 {frame_count} 帧, 当前 FPS: {current_fps:.1f}, 告警次数: {alert_count}")
+            print(f"已处理 {frame_count} 帧, 当前 FPS: {current_fps:.1f}, 告警次数: {alert_count}", flush=True)
             fps_start_time = datetime.now()
             fps_frame_count = 0
     
